@@ -19,6 +19,9 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Change to script directory for correct relative paths
+cd "$(dirname "$0")"
+
 # Cleanup function
 cleanup() {
     echo ""
@@ -42,7 +45,6 @@ echo -e "${GREEN}PASS${NC}: Dockerfile found"
 # Test 2: Build the image
 echo ""
 echo "Test 2: Building Docker image..."
-cd "$(dirname "$0")"
 if docker build -f "$DOCKERFILE_PATH" -t $IMAGE_NAME "$BUILD_CONTEXT/backend" > /tmp/build.log 2>&1; then
     echo -e "${GREEN}PASS${NC}: Image built successfully"
 else
