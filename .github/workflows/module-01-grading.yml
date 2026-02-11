@@ -28,9 +28,8 @@ jobs:
           echo "Dockerfile found"
 
       - name: Build Docker image
-        working-directory: assignments/module-01-dockerize-backend/starter
         run: |
-          docker build -t backend-test .
+          docker build -f assignments/module-01-dockerize-backend/starter/Dockerfile -t backend-test backend
           echo "Docker build succeeded"
 
       - name: Check image size

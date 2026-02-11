@@ -19,11 +19,15 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Change to script directory for correct relative paths
+cd "$(dirname "$0")"
+
 # Cleanup function
 cleanup() {
     echo ""
     echo "Cleaning up..."
     docker rm -f $CONTAINER_NAME 2>/dev/null || true
+    docker rm -f postgres-test 2>/dev/null || true
     docker rmi -f $IMAGE_NAME 2>/dev/null || true
 }
 
@@ -42,7 +46,6 @@ echo -e "${GREEN}PASS${NC}: Dockerfile found"
 # Test 2: Build the image
 echo ""
 echo "Test 2: Building Docker image..."
-cd "$(dirname "$0")"
 if docker build -f "$DOCKERFILE_PATH" -t $IMAGE_NAME "$BUILD_CONTEXT/backend" > /tmp/build.log 2>&1; then
     echo -e "${GREEN}PASS${NC}: Image built successfully"
 else
@@ -66,10 +69,28 @@ else
     echo -e "${GREEN}PASS${NC}: Image size is acceptable"
 fi
 
-# Test 4: Run the container
+# Test 4: Start PostgreSQL and run the container
 echo ""
-echo "Test 4: Starting container..."
-if docker run -d --name $CONTAINER_NAME -p 3000:3000 $IMAGE_NAME > /dev/null; then
+echo "Test 4: Starting PostgreSQL and application container..."
+docker run -d --name postgres-test \
+    -e POSTGRES_USER=postgres \
+    -e POSTGRES_PASSWORD=postgres \
+    -e POSTGRES_DB=classroom_db \
+    -p 5432:5432 \
+    postgres:16-alpine
+sleep 5
+
+PG_HOST=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' postgres-test)
+
+if docker run -d --name $CONTAINER_NAME -p 3000:3000 \
+    -e NODE_ENV=development \
+    -e PORT=3000 \
+    -e DB_HOST=$PG_HOST \
+    -e DB_PORT=5432 \
+    -e DB_NAME=classroom_db \
+    -e DB_USER=postgres \
+    -e DB_PASSWORD=postgres \
+    $IMAGE_NAME > /dev/null; then
     echo -e "${GREEN}PASS${NC}: Container started"
 else
     echo -e "${RED}FAIL${NC}: Container failed to start"
@@ -79,7 +100,7 @@ fi
 # Wait for application to be ready
 echo ""
 echo "Waiting for application to be ready..."
-sleep 3
+sleep 5
 
 # Test 5: Check if container is running
 echo ""
